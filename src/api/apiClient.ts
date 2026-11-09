@@ -70,6 +70,8 @@ export class ApiResult {
 		readonly body: any,
 		readonly headers: Record<string, string>,
 		private readonly record: RecordedCall,
+		/** The undecoded response body - for binary downloads (PDF) where `body` is lossy text. */
+		readonly bytes: Buffer = Buffer.alloc(0),
 	) {}
 
 	get ok(): boolean {
@@ -137,7 +139,8 @@ export class ApiClient {
 		});
 		const durationMs = Date.now() - startedAt;
 
-		const text = await response.text();
+		const bytes = await response.body();
+		const text = bytes.toString("utf8");
 		let body: unknown = text;
 		try {
 			body = text ? JSON.parse(text) : undefined;
@@ -157,6 +160,6 @@ export class ApiClient {
 			responseBody: truncate(redact(body)),
 		};
 		this.calls.push(record);
-		return new ApiResult(response.status(), body, response.headers(), record);
+		return new ApiResult(response.status(), body, response.headers(), record, bytes);
 	}
 }

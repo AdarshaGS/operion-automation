@@ -20,10 +20,16 @@ const STANDARD_NAMES = [
 	"Stock on hand and valuation",
 	"Low stock items",
 	"Purchase spend by supplier",
+	"Fee collection register",
+	"Fee collection summary",
+	"Fee defaulters",
+	"Attendance percentage by student",
+	"Exam results by section",
+	"Subject-wise marks",
 ];
 
 test.describe("standard reports", () => {
-	test("RPT-01 seeding a new organisation creates the four standard reports, published, and a second seed adds nothing", async ({ request, calls }) => {
+	test("RPT-01 seeding a new organisation creates the ten standard reports, published, and a second seed adds nothing", async ({ request, calls }) => {
 		const org = await createOtherOrganisation(request, calls);
 		const first = await org.client.post(`${REPORTS}/seed-standard`);
 		first.expectStatus(200).expectJson((list) => {
@@ -32,7 +38,7 @@ test.describe("standard reports", () => {
 			for (const r of list) expectShape(r, RESPONSE_SHAPE);
 		});
 		(await org.client.post(`${REPORTS}/seed-standard`)).expectStatus(200).expectJson((list) => expect(list).toEqual([]));
-		(await org.client.get(REPORTS)).expectStatus(200).expectJson((list) => expect(list).toHaveLength(4));
+		(await org.client.get(REPORTS)).expectStatus(200).expectJson((list) => expect(list).toHaveLength(STANDARD_NAMES.length));
 	});
 
 	test("RPT-01 the standard reports declare their date parameters and column labels", async ({ request, calls }) => {

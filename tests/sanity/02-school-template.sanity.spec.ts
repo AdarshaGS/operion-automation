@@ -164,6 +164,8 @@ test("sanity 02: apply the school template - grades, classes and sections ready 
 		for (const section of [T.defaultSection, T.addedSection]) {
 			await expect(page.getByRole("row").filter({ has: page.getByRole("cell", { name: section, exact: true }) })).toBeVisible();
 		}
+		// The campus choice sticks in the browser across phases; leave it on Main Campus, where later phases look for their class.
+		await topBar.selectCampus(campusNames[0]);
 	});
 
 	await j.step(S.modules, async () => {

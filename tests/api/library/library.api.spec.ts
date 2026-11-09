@@ -13,6 +13,12 @@ import { uniqueCode } from "../../../src/api/data";
 const today = () => new Date().toISOString().slice(0, 10);
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400e3).toISOString().slice(0, 10);
 
+/** Sets the per-day overdue fine rate, leaving the other borrowing rules as they are. */
+async function setFineRate(api: Parameters<typeof bookWithCopies>[0], fineRatePerDay: number) {
+	const current = (await api.get(`${LIBRARY}/settings`)).expectStatus(200).body;
+	(await api.put(`${LIBRARY}/settings`, { body: { ...current, fineRatePerDay } })).expectStatus(200);
+}
+
 async function campusOf(client: { get: (path: string) => Promise<{ body: { id: number }[] }> }) {
 	return (await client.get("/api/v1/campuses")).body[0].id;
 }
@@ -186,9 +192,9 @@ test.describe("LIB-05 and LIB-14 settings and limits (throwaway organisation)", 
 	test("LIB-14 settings start at the defaults and a PUT is read back", async ({ request, calls }) => {
 		const org = await createOtherOrganisation(request, calls);
 		(await org.client.get(`${LIBRARY}/settings`)).expectStatus(200).expectJson((s) => {
-			expect(s).toEqual({ maxLoansStudent: 3, maxLoansStaff: 5, borrowingPeriodDaysStudent: 14, borrowingPeriodDaysStaff: 30, blockIssueOnOverdue: false });
+			expect(s).toEqual({ maxLoansStudent: 3, maxLoansStaff: 5, borrowingPeriodDaysStudent: 14, borrowingPeriodDaysStaff: 30, blockIssueOnOverdue: false, fineRatePerDay: 0 });
 		});
-		const next = { maxLoansStudent: 2, maxLoansStaff: 6, borrowingPeriodDaysStudent: 7, borrowingPeriodDaysStaff: 21, blockIssueOnOverdue: true };
+		const next = { maxLoansStudent: 2, maxLoansStaff: 6, borrowingPeriodDaysStudent: 7, borrowingPeriodDaysStaff: 21, blockIssueOnOverdue: true, fineRatePerDay: 1.5 };
 		(await org.client.put(`${LIBRARY}/settings`, { body: next })).expectStatus(200);
 		(await org.client.get(`${LIBRARY}/settings`)).expectJson((s) => expect(s).toEqual(next));
 	});
@@ -243,24 +249,42 @@ test.describe("LIB-05 and LIB-14 settings and limits (throwaway organisation)", 
 });
 
 test.describe("LIB-07 to LIB-10 overdue, lost, damaged and fines", () => {
-	test("LIB-07 a late return raises an overdue fine", async ({ api }) => {
+	test("LIB-07 a late return raises an overdue fine at the configured daily rate", async ({ api }) => {
+		await setFineRate(api, 2);
 		const s = await attendanceSetup(api, 1);
 		const { copies } = await bookWithCopies(api, s.base.campusId, 1);
 		const record = await issue(api, copies[0].id, await personOfStudent(api, s.studentIds[0]), { borrowedDate: "2026-09-01", dueDate: "2026-09-10" });
 		await api.post(`${LIBRARY}/borrow-records/{id}/return`, { params: { id: record.id }, body: { returnedDate: "2026-09-20", damaged: false } });
 		(await api.get(`${LIBRARY}/fines`, { query: { borrowRecordId: record.id } })).expectStatus(200).expectJson((fines) => {
-			expect(fines.filter((f: { reason: string }) => f.reason === "OVERDUE"), "returning 10 days late raises no fine; there is no fine rate setting").toHaveLength(1);
+			const overdue = fines.filter((f: { reason: string }) => f.reason === "OVERDUE");
+			expect(overdue).toHaveLength(1);
+			expect(overdue[0]).toMatchObject({ amount: 20, status: "PENDING" });
 		});
 	});
 
+	test("LIB-07 with no fine rate set a late return raises no fine", async ({ request, calls }) => {
+		const org = await createOtherOrganisation(request, calls);
+		const { copies } = await bookWithCopies(org.client, await campusOf(org.client), 1);
+		const person = await createPerson(org.client, "Late");
+		const record = await issue(org.client, copies[0].id, person, { borrowedDate: "2026-09-01", dueDate: "2026-09-10" });
+		await org.client.post(`${LIBRARY}/borrow-records/{id}/return`, { params: { id: record.id }, body: { returnedDate: "2026-09-20", damaged: false } });
+		(await org.client.get(`${LIBRARY}/fines`, { query: { borrowRecordId: record.id } })).expectStatus(200).expectJson((fines) => expect(fines).toHaveLength(0));
+	});
+
+	test("LIB-07 a negative fine rate returns 400", async ({ request, calls }) => {
+		const org = await createOtherOrganisation(request, calls);
+		(await org.client.put(`${LIBRARY}/settings`, { body: { maxLoansStudent: 3, maxLoansStaff: 5, borrowingPeriodDaysStudent: 14, borrowingPeriodDaysStaff: 30, blockIssueOnOverdue: false, fineRatePerDay: -1 } })).expectStatus(400);
+	});
+
 	test("LIB-07 the overdue list shows days overdue and a fine due", async ({ api }) => {
+		await setFineRate(api, 2);
 		const s = await attendanceSetup(api, 1);
 		const { copies } = await bookWithCopies(api, s.base.campusId, 1);
 		const record = await issue(api, copies[0].id, await personOfStudent(api, s.studentIds[0]), { borrowedDate: daysAgo(20), dueDate: daysAgo(6) });
 		(await api.get(`${LIBRARY}/borrow-records/overdue`)).expectStatus(200).expectJson((list) => {
 			const row = list.find((r: { id: number }) => r.id === record.id);
 			expect(row.daysOverdue).toBe(6);
-			expect(row.fineDue, "fineDue is always 0").toBeGreaterThan(0);
+			expect(row.fineDue).toBeGreaterThanOrEqual(12);
 		});
 	});
 
@@ -299,7 +323,8 @@ test.describe("LIB-07 to LIB-10 overdue, lost, damaged and fines", () => {
 		expect(after.overdue - before.overdue).toBeGreaterThanOrEqual(1);
 	});
 
-	test("LIB-09 a fine is raised PENDING, can be paid once, and a paid fine cannot be waived", async ({ api }) => {
+	test("LIB-09 a fine is raised PENDING, can be paid once, and a paid fine cannot be waived", async ({ api, anon, seed }) => {
+		const waiver = await createDisposableUser(api, anon, seed, []);
 		const s = await attendanceSetup(api, 1);
 		const { copies } = await bookWithCopies(api, s.base.campusId, 1);
 		const record = await issue(api, copies[0].id, await personOfStudent(api, s.studentIds[0]));
@@ -307,17 +332,18 @@ test.describe("LIB-07 to LIB-10 overdue, lost, damaged and fines", () => {
 		fine.expectStatus(200).expectJson((f) => expect(f).toMatchObject({ status: "PENDING", amount: 25, reason: "OVERDUE" }));
 		(await api.post(`${LIBRARY}/fines/{id}/pay`, { params: { id: fine.body.id }, body: { paidDate: today() } })).expectStatus(200).expectJson((f) => expect(f).toMatchObject({ status: "PAID", paidDate: today() }));
 		(await api.post(`${LIBRARY}/fines/{id}/pay`, { params: { id: fine.body.id }, body: { paidDate: today() } })).expectStatus(409);
-		(await api.post(`${LIBRARY}/fines/{id}/waive`, { params: { id: fine.body.id }, body: { waivedBy: 1, waivedReason: "x" } })).expectStatus(409);
+		(await api.post(`${LIBRARY}/fines/{id}/waive`, { params: { id: fine.body.id }, body: { waivedBy: waiver.userId, waivedReason: "x" } })).expectStatus(409);
 		(await api.get(`${LIBRARY}/fines`, { query: { borrowRecordId: record.id } })).expectJson((list) => expect(list.map((f: { id: number }) => f.id)).toEqual([fine.body.id]));
 	});
 
-	test("LIB-09 a waived fine records who waived it and why", async ({ api }) => {
+	test("LIB-09 a waived fine records who waived it and why", async ({ api, anon, seed }) => {
+		const waiver = await createDisposableUser(api, anon, seed, []);
 		const s = await attendanceSetup(api, 1);
 		const { copies } = await bookWithCopies(api, s.base.campusId, 1);
 		const record = await issue(api, copies[0].id, await personOfStudent(api, s.studentIds[0]));
 		const fine = await api.post(`${LIBRARY}/fines`, { body: { borrowRecordId: record.id, amount: 40, reason: "DAMAGED" } });
-		(await api.post(`${LIBRARY}/fines/{id}/waive`, { params: { id: fine.body.id }, body: { waivedBy: 1, waivedReason: "First offence" } })).expectStatus(200).expectJson((f) => {
-			expect(f).toMatchObject({ status: "WAIVED", waivedBy: 1, waivedReason: "First offence" });
+		(await api.post(`${LIBRARY}/fines/{id}/waive`, { params: { id: fine.body.id }, body: { waivedBy: waiver.userId, waivedReason: "First offence" } })).expectStatus(200).expectJson((f) => {
+			expect(f).toMatchObject({ status: "WAIVED", waivedBy: waiver.userId, waivedReason: "First offence" });
 		});
 		(await api.post(`${LIBRARY}/fines/{id}/pay`, { params: { id: fine.body.id }, body: { paidDate: today() } })).expectStatus(409);
 	});

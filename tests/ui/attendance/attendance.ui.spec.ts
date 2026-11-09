@@ -163,7 +163,8 @@ test.describe("corrections and locking", () => {
 
 test.describe("quick mark (today)", () => {
 	test("ATT-U12 mark a whole section from the quick screen, then it points to the full register", async ({ api, quickAttendance, page }) => {
-		const s = await attendanceSetup(api, 2);
+		// The quick screen marks today, and Operion rejects dates outside the section's academic year (ATT-04).
+		const s = await attendanceSetup(api, 2, 1, { coverToday: true });
 		await quickAttendance.open();
 		await quickAttendance.choose(s.className, s.sectionName);
 		for (const name of s.studentNames) await expect(quickAttendance.row(name)).toBeVisible();

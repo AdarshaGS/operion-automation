@@ -68,6 +68,7 @@ test.describe("search filters and sorting", () => {
 	for (const column of ["admissionNumber", "admissionDate", "firstName", "lastName", "studentId", "status"]) {
 		for (const direction of ["asc", "desc"] as const) {
 			test(`STU-10 sorts by ${column} ${direction}`, async ({ api }) => {
+				await admitStudent(api); // a list needs two rows to show an order, and this can run before any other test has admitted one
 				const res = await api.get("/api/v1/students/search", { query: { size: 100, sort: `${column},${direction}` } });
 				res.expectStatus(200).expectJson((page) => {
 					const values: string[] = page.content.map((s: Record<string, string>) => String(s[column]).toLowerCase());
@@ -576,7 +577,7 @@ test.describe("exits and transfers", () => {
 test.describe("import and export", () => {
 	test("STU-25 imports a CSV: good rows succeed, a bad row fails alone and says why", async ({ api }) => {
 		const tag = uniqueCode("Imp");
-		const result = await api.post("/api/v1/students/import", { multipart: csv("students.csv", `firstName,lastName,admissionDate,admissionNumber\nIma,${tag}A,2026-06-01,${tag}-1\n,${tag}B,2026-06-01,${tag}-2\nIma,${tag}C,not-a-date,${tag}-3\nIma,${tag}D,2026-06-02,${tag}-4\n`) });
+		const result = await api.post("/api/v1/students/import", { multipart: csv("students.csv", `firstName,lastName,gender,admissionDate,admissionNumber\nIma,${tag}A,Female,2026-06-01,${tag}-1\n,${tag}B,Female,2026-06-01,${tag}-2\nIma,${tag}C,Female,not-a-date,${tag}-3\nIma,${tag}D,Female,2026-06-02,${tag}-4\n`) });
 		result.expectStatus(200).expectJson((rows) => {
 			expect(rows.map((r: { row: number; success: boolean }) => [r.row, r.success])).toEqual([[2, true], [3, false], [4, false], [5, true]]);
 			expect(rows[1].message).toMatch(/firstName/);
@@ -610,13 +611,14 @@ test.describe("import and export", () => {
 		(await api.post("/api/v1/students/import")).expectStatus(BAD);
 	});
 
-	test("STU-25 an empty file imports nothing", async ({ api }) => {
-		(await api.post("/api/v1/students/import", { multipart: csv("students.csv", "") })).expectStatus(200).expectJson((rows) => expect(rows).toEqual([]));
+	test("STU-25 an empty file is a client error, like every other importer (IMP-03); a header-only file imports nothing", async ({ api }) => {
+		(await api.post("/api/v1/students/import", { multipart: csv("students.csv", "") })).expectStatus(BAD);
+		(await api.post("/api/v1/students/import", { multipart: csv("students.csv", "firstName,admissionDate\n") })).expectStatus(200).expectJson((rows) => expect(rows).toEqual([]));
 	});
 
 	test("STU-26 re-importing a row with an admission number that exists fails that row cleanly", async ({ api }) => {
 		const tag = uniqueCode("Dup");
-		const file = csv("students.csv", `firstName,lastName,admissionDate,admissionNumber\nIma,${tag},2026-06-01,${tag}\n`);
+		const file = csv("students.csv", `firstName,lastName,gender,admissionDate,admissionNumber\nIma,${tag},Female,2026-06-01,${tag}\n`);
 		(await api.post("/api/v1/students/import", { multipart: file })).expectJson((rows) => expect(rows[0].success).toBe(true));
 		(await api.post("/api/v1/students/import", { multipart: file })).expectStatus(200).expectJson((rows) => {
 			expect(rows[0].success).toBe(false);
@@ -700,7 +702,7 @@ test.describe("persons", () => {
 
 	test("STU-28 a partial patch of a person keeps the fields it does not send", async ({ api }) => {
 		const last = uniqueCode("Per");
-		const created = await api.post("/api/v1/persons", { body: { firstName: "Pia", lastName: last, email: "pia@example.test" } });
+		const created = await api.post("/api/v1/persons", { body: { firstName: "Pia", lastName: last, gender: "FEMALE", email: "pia@example.test" } });
 		(await api.patch("/api/v1/persons/{id}", { params: { id: created.body.id }, body: { firstName: "Priya" } })).expectStatus(200).expectJson((person) => {
 			expect(person).toMatchObject({ firstName: "Priya", lastName: last, email: "pia@example.test" });
 		});

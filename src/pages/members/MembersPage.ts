@@ -3,6 +3,8 @@ import type { Page } from "@playwright/test";
 export interface NewMember {
 	firstName: string;
 	lastName: string;
+	/** The Add member dialog requires a gender; defaults to "Other". */
+	gender?: string;
 	email?: string;
 	phone?: string;
 	roles?: string[];
@@ -22,8 +24,9 @@ export class MembersPage {
 	}
 
 	tile(label: string) {
-		// A tile is the label with its number next to it.
-		return this.page.getByText(label, { exact: true }).locator("xpath=..");
+		// A tile is the label with its number next to it. Matching the number too keeps the "Active" tile apart
+		// from the many "Active" status chips in the member table below it.
+		return this.page.locator("div").filter({ hasText: new RegExp(`^${label}\\s*\\d+$`) }).last();
 	}
 
 	async search(text: string) {
@@ -60,6 +63,8 @@ export class MembersPage {
 		const dialog = this.dialog();
 		await dialog.getByLabel(/^First name/).fill(member.firstName);
 		await dialog.getByLabel(/^Last name/).fill(member.lastName);
+		await dialog.getByRole("combobox", { name: /^Gender/ }).click();
+		await this.page.getByRole("option", { name: member.gender ?? "Other", exact: true }).click();
 		if (member.email !== undefined) await dialog.getByLabel(/^Email/).fill(member.email);
 		if (member.phone !== undefined) await dialog.getByLabel(/^Phone/).fill(member.phone);
 		if (member.roles?.length) {

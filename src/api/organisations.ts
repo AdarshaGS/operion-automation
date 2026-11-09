@@ -4,6 +4,7 @@ import type { APIRequestContext } from "@playwright/test";
 import { ApiClient, type RecordedCall } from "./apiClient";
 import { uniqueSuffix } from "./data";
 import { FIXED_PASSWORD } from "../setup/roles";
+import { enableSuiteModules } from "../setup/provisioning";
 
 export interface OtherOrganisation {
 	id: number;
@@ -34,6 +35,8 @@ export async function createOtherOrganisation(request: APIRequestContext, calls:
 			},
 		});
 	created.expectStatus([200, 201]);
+	// Transport ships switched off; the other tenant gets it on so it behaves like the main fixture organisation.
+	await enableSuiteModules(created.body.id);
 	const login = await anon.post("/api/v1/auth/login", { body: { organisationSlug: slug, email: ownerEmail, password: FIXED_PASSWORD } });
 	login.expectStatus(200);
 	return { id: created.body.id, slug, ownerEmail, ownerPassword: FIXED_PASSWORD, client: anon.withToken(login.body.token, "other-org-owner"), session: login.body };

@@ -67,8 +67,9 @@ test.describe("list", () => {
 			await route.continue();
 		});
 		await page.goto("/students");
+		const searched = page.waitForResponse((r) => r.url().includes(`search=${student.admissionNumber}`));
 		await page.getByLabel("Search").fill(student.admissionNumber);
-		await page.waitForResponse((r) => r.url().includes(`search=${student.admissionNumber}`));
+		await searched;
 		await page.waitForTimeout(3500);
 		await expect(studentList.count()).toHaveText("1 student");
 		await expect(studentList.row(student.admissionNumber)).toBeVisible();
@@ -235,7 +236,7 @@ test.describe("bulk import", () => {
 	test("STU-U06 imports students from a CSV in Settings > Imports & exports and reports the bad row", async ({ importsExports, api }) => {
 		const tag = uniqueCode("UIImp");
 		await importsExports.open();
-		await importsExports.importFile("Students", { name: "students.csv", mimeType: "text/csv", buffer: Buffer.from(`firstName,lastName,admissionDate,admissionNumber\nIma,${tag}A,2026-06-01,${tag}-1\n,${tag}B,2026-06-01,${tag}-2\n`) });
+		await importsExports.importFile("Students", { name: "students.csv", mimeType: "text/csv", buffer: Buffer.from(`firstName,lastName,gender,admissionDate,admissionNumber\nIma,${tag}A,Female,2026-06-01,${tag}-1\n,${tag}B,Female,2026-06-01,${tag}-2\n`) });
 		await expect(importsExports.chip("Total rows: 2")).toBeVisible();
 		await expect(importsExports.chip("Imported: 1")).toBeVisible();
 		await expect(importsExports.chip("Errors: 1")).toBeVisible();

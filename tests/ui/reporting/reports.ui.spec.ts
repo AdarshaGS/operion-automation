@@ -15,7 +15,10 @@ import { FIXED_PASSWORD } from "../../../src/setup/roles";
 import { storageStateFor } from "../../../src/ui/session";
 
 const INTERNALS = /com\.operion|No enum constant|java\.|reporting_ro|@'localhost'|Exception/i;
-const STANDARD = ["Sales totals by item, customer and campus", "Stock on hand and valuation", "Low stock items", "Purchase spend by supplier"];
+const STANDARD = [
+	"Sales totals by item, customer and campus", "Stock on hand and valuation", "Low stock items", "Purchase spend by supplier",
+	"Fee collection register", "Fee collection summary", "Fee defaulters", "Attendance percentage by student", "Exam results by section", "Subject-wise marks",
+];
 
 test.describe("the report list", () => {
 	test("RPT-U01 the list shows a report with its name, description and status, under My reports for its author", async ({ reports, api }) => {
@@ -44,7 +47,7 @@ test.describe("the report list", () => {
 		await expect(reports.row(theirs.name)).toBeVisible();
 	});
 
-	test("RPT-U01 seeding the standard reports from the screen lists the four reports as published", async ({ browser, request, calls }) => {
+	test("RPT-U01 seeding the standard reports from the screen lists the standard reports as published", async ({ browser, request, calls }) => {
 		const org = await createOtherOrganisation(request, calls);
 		const context = await browser.newContext({ baseURL: UI_BASE_URL, storageState: storageStateFor(org.session, UI_BASE_URL) });
 		const page = await context.newPage();

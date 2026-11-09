@@ -24,7 +24,8 @@ export class ClassOfferingsPanel {
 
 	async fillClass(values: { year: string; campus: string; grade: string; displayName?: string }) {
 		await this.chooseIn(/^Academic year/, values.year);
-		await this.chooseIn(/^Campus/, values.campus);
+		// The dialog is titled "Add class to <campus>": the campus is the one selected in the header, so there is no field.
+		if (await this.addDialog().getByRole("combobox", { name: /^Campus/ }).count()) await this.chooseIn(/^Campus/, values.campus);
 		await this.chooseIn(/^Grade level/, values.grade);
 		if (values.displayName !== undefined) await this.addDialog().getByLabel("Display name").fill(values.displayName);
 	}

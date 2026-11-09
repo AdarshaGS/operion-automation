@@ -45,6 +45,6 @@ export class StructureSetupPage {
 	/** A review row is done when its icon is the filled check (MUI's default data-testid), not the empty circle. */
 	reviewRowDoneIcon(label: string) {
 		// The innermost div holding the label is that row's own Stack, so the icon lookup can't leak into another row.
-		return this.reviewSection().locator("div").filter({ has: this.page.getByText(label, { exact: true }) }).last().getByTestId("CheckCircleIcon");
+		return this.page.locator("div").filter({ has: this.page.getByText(label, { exact: true }) }).last().getByTestId("CheckCircleIcon");
 	}
 }

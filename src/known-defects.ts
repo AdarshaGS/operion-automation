@@ -59,7 +59,6 @@ export const DEFECTS: Record<string, string> = {
 	"RPT-09 an attempted run that fails (for example one reaching for an application table) is still on the record": "5be",
 	"RPT-09 creating, editing, publishing, archiving and sharing a report are logged too, not only running it": "5be",
 	"RPT-U02 a query the server refuses shows its reason inside the dialog, where the person is looking": "5bf",
-	"RPT-U03 sharing with a user saves the share and closes the dialog without an error": "5bf",
 	"RPT-U03 a colleague who may only run a report is not offered Publish, Archive, Save changes or Share": "5bf",
 	"RPT-U03 sharing with a user id that does not exist shows an error in the dialog": "5bf",
 	"RPT-U03 sharing a report the person cannot edit is refused with the reason, not silently closed": "5bf",

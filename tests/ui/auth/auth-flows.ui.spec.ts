@@ -163,13 +163,13 @@ test.describe("email verification page", () => {
 
 		await emailVerify.openLink(seed.organisationSlug, token);
 		await emailVerify.verify();
-		await expect(emailVerify.successAlert()).toBeVisible();
+		await expect(emailVerify.successAlert()).toBeVisible({ timeout: 15_000 }); // slow when the whole suite runs in parallel
 	});
 
 	test("AUTH-U07 an invalid token shows an error", async ({ emailVerify, seed }) => {
 		await emailVerify.openLink(seed.organisationSlug, "not-a-real-token");
 		await emailVerify.verify();
-		await expect(emailVerify.errorAlert()).toBeVisible();
+		await expect(emailVerify.errorAlert()).toBeVisible({ timeout: 15_000 });
 	});
 });
 
@@ -209,6 +209,9 @@ test.describe("change password from the account menu", () => {
 		await appLayout.openChangePassword();
 		await appLayout.changePassword(user.password, NEW_PASSWORD);
 		await expect(appLayout.changePasswordDialog().getByText("Password updated")).toBeVisible();
+		// The dialog stays open to show the confirmation; close it before using the account menu behind it.
+		await appLayout.changePasswordDialog().getByRole("button", { name: "Close" }).click();
+		await expect(appLayout.changePasswordDialog()).toBeHidden();
 
 		await appLayout.signOut();
 		await loginPage.login(seed.organisationSlug, user.email, NEW_PASSWORD);

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 export interface NewOrganisation {
 	name: string;
@@ -38,7 +38,8 @@ export class PlatformOrganisationsPage {
 		];
 		for (const [label, value] of fields) await dialog.getByLabel(label).fill(value);
 		await dialog.getByRole("button", { name: "Create", exact: true }).click();
-		await dialog.waitFor({ state: "hidden" });
+		// Bounded: an unbounded waitFor sat out the whole 10-minute sanity timeout when the dialog stayed open.
+		await expect(dialog, "the Add organisation dialog closes once the business is created").toBeHidden({ timeout: 30_000 });
 	}
 
 	row(slug: string) {
@@ -50,6 +51,11 @@ export class PlatformOrganisationsPage {
 		await this.row(slug).click();
 		await this.page.waitForURL(/\/platform\/organisations\/\d+$/);
 		return Number(this.page.url().split("/").pop());
+	}
+
+	/** The on/off switch for a feature (module) on the organisation detail page, e.g. "Performance". */
+	moduleSwitch(label: string) {
+		return this.page.getByRole("switch", { name: `${label} enabled` });
 	}
 
 	errorAlert() {

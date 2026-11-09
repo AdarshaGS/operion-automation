@@ -11,14 +11,25 @@ export class FeeCollectionPage {
 
 	async open() {
 		await this.page.goto("/fees");
-		await this.page.getByRole("combobox", { name: "Student" }).waitFor();
+		await this.page.getByRole("heading", { name: "Fees & Collections" }).waitFor();
 	}
 
-	/** The dropdown lists every student; the label is "First Last (ADMISSION)", or the admission number alone when names cannot be read. */
-	async chooseStudent(nameOrAdmission: string) {
-		await this.page.getByRole("combobox", { name: "Student" }).click();
-		await this.page.getByRole("option", { name: nameOrAdmission }).click();
+	/** "Collect Fee" opens a dialog that first asks which student. The picker searches the server as
+	 * you type and labels each option "First Last (STUDENT-ID)"; pass the name, or the name followed by
+	 * anything in brackets (only the name is matched). Only the first name is typed: the search matches
+	 * first name, last name or admission number one at a time, so a full name finds nothing (5fs). */
+	async chooseStudent(nameOrLabel: string) {
+		const name = nameOrLabel.replace(/\s*\(.*\)$/, "");
+		await this.page.getByRole("button", { name: "Collect Fee" }).click();
+		await this.page.getByRole("dialog", { name: /^Collect fee/ }).getByRole("combobox", { name: "Student" }).fill(name.split(" ")[0]);
+		await this.page.getByRole("option", { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\(`) }).click();
 		await this.page.getByRole("heading", { name: "Fee assignments" }).or(this.accessBanner()).waitFor();
+	}
+
+	/** Closes the "Collect fee" dialog, back to the ledger. */
+	async closeStudent() {
+		await this.page.getByRole("dialog", { name: /^Collect fee/ }).getByRole("button", { name: "Close", exact: true }).click();
+		await this.page.getByRole("dialog", { name: /^Collect fee/ }).waitFor({ state: "hidden" });
 	}
 
 	private dialog(title: RegExp | string) {
@@ -112,6 +123,20 @@ export class FeeCollectionPage {
 
 	paymentRow(receiptNumber: string) {
 		return this.page.getByRole("row").filter({ hasText: receiptNumber });
+	}
+
+	/** The Receipt button on a payment-history row; resolves to the browser download it starts. */
+	async downloadReceipt(receiptNumber: string) {
+		const download = this.page.waitForEvent("download");
+		await this.paymentRow(receiptNumber).getByRole("button", { name: "Receipt", exact: true }).click();
+		return download;
+	}
+
+	/** "Download receipt" in the Payment recorded dialog. */
+	async downloadReceiptFromDialog() {
+		const download = this.page.waitForEvent("download");
+		await this.receiptDialog().getByRole("button", { name: "Download receipt" }).click();
+		return download;
 	}
 
 	async markBounced(receiptNumber: string) {

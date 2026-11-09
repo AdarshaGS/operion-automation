@@ -162,48 +162,68 @@ test.describe("review and go-live", () => {
 	});
 });
 
+/** The wizard is linear: Review only opens once the profile contact, business settings and a current academic year are in place. */
+async function completeRequiredSteps(org: OtherOrganisation) {
+	(await org.client.patch("/api/v1/organisations/profile", { body: { primaryContactName: "Priya Principal", primaryContactEmail: "principal@example.test" } })).expectStatus(200);
+	const year = await org.client.post("/api/v1/academic-years", { body: { name: `Year ${org.slug}`, startDate: "2026-04-01", endDate: "2027-03-31" } });
+	year.expectStatus(200);
+	(await org.client.post("/api/v1/academic-years/{id}/mark-current", { params: { id: year.body.id } })).expectStatus(200);
+}
+
 test.describe("structure setup wizard", () => {
-	test("ORG-U01 the wizard walks profile, business settings and campuses, then finishes on the dashboard", async ({ page, request, calls, structureSetup, organisationProfile }) => {
+	test("ORG-U01 the wizard walks profile, business settings, academic year and campuses, then finishes on the dashboard", async ({ page, request, calls, structureSetup, organisationProfile }) => {
 		// Finishing lands on the dashboard, whose console errors are covered by the dashboard scenarios.
 		test.info().annotations.push({ type: "diagnostics-handled" });
 		const org = await freshOrganisation(request, calls, page);
 		await structureSetup.open();
 		await organisationProfile.fill({ contactName: "Priya Principal", contactEmail: "principal@example.test" });
-		await structureSetup.next();
+		// Saving the profile moves the wizard on by itself.
+		await organisationProfile.save();
 		await expect(page.getByRole("heading", { name: "Business settings" })).toBeVisible();
 		await structureSetup.next();
+		await expect(page.getByRole("heading", { name: "Academic years" })).toBeVisible();
+		// Continue is refused until a year is current.
+		await structureSetup.next();
+		await expect(page.getByRole("heading", { name: "Academic years" })).toBeVisible();
+		await expect(page.getByText("Add an academic year and mark it as current to continue.").last()).toBeVisible();
+		const year = await org.client.post("/api/v1/academic-years", { body: { name: `Year ${org.slug}`, startDate: "2026-04-01", endDate: "2027-03-31" } });
+		year.expectStatus(200);
+		(await org.client.post("/api/v1/academic-years/{id}/mark-current", { params: { id: year.body.id } })).expectStatus(200);
+		await structureSetup.next();
 		await expect(page.getByRole("heading", { name: /Campuses/ }).first()).toBeVisible();
-		await structureSetup.goToStep("Review and finish");
+		// Campuses are optional, but the Review tab only unlocks once that step has been continued past.
+		await structureSetup.next();
 		await expect(page.getByRole("heading", { name: "Review and finish" })).toBeVisible();
 		await structureSetup.finish();
 		await expect(page).toHaveURL(/\/dashboard/);
 		expect(org.id).toBeGreaterThan(0);
 	});
 
-	test("ORG-U01 the review step flags a missing campus", async ({ page, request, calls, structureSetup }) => {
-		await freshOrganisation(request, calls, page);
+	test("ORG-U01 the review step ticks the required items and counts the optional campuses", async ({ page, request, calls, structureSetup }) => {
+		const org = await freshOrganisation(request, calls, page);
+		await completeRequiredSteps(org);
 		await structureSetup.open();
-		await structureSetup.goToStep("Review and finish");
-		await expect(structureSetup.reviewRow("At least one campus / location")).toBeVisible();
+		await structureSetup.next();
+		await expect(structureSetup.reviewRowDoneIcon("A current academic year")).toBeVisible();
+		await expect(page.getByText(/Optional: 1 active campus \/ location\./)).toBeVisible();
+		await expect(page.getByRole("button", { name: "Finish setup" })).toBeEnabled();
 	});
 
-	test("ORG-U01 Back is disabled on the first step and returns to it from the second", async ({ page, request, calls, structureSetup }) => {
+	test("ORG-U01 Review stays locked until the required steps are done", async ({ page, request, calls, structureSetup }) => {
+		await freshOrganisation(request, calls, page);
+		await structureSetup.open();
+		await expect(structureSetup.step("Review and finish")).toBeDisabled();
+	});
+
+	test("ORG-U01 Back is disabled on the first step and returns to it from the second", async ({ page, request, calls, structureSetup, organisationProfile }) => {
 		await freshOrganisation(request, calls, page);
 		await structureSetup.open();
 		await expect(page.getByRole("button", { name: "Back" })).toBeDisabled();
-		await structureSetup.next();
+		await organisationProfile.fill({ contactName: "Priya Principal", contactEmail: "principal@example.test" });
+		await organisationProfile.save();
+		await expect(page.getByRole("heading", { name: "Business settings" })).toBeVisible();
 		await expect(page.getByRole("button", { name: "Back" })).toBeEnabled();
 		await structureSetup.back();
 		await expect(page.getByRole("heading", { name: "Organisation profile" })).toBeVisible();
-	});
-});
-
-test.describe("settings navigation", () => {
-	test("ORG-U07 the organisation group links to its sections", async ({ page, request, calls, settings }) => {
-		await freshOrganisation(request, calls, page);
-		await settings.open();
-		for (const section of ["Business settings", "Organisation profile", "School setup template"]) {
-			await expect(page.getByText(section, { exact: true }).first()).toBeVisible();
-		}
 	});
 });

@@ -23,18 +23,45 @@ export async function createPerson(client: ApiClient, firstName = "Auto", extra:
 	return created.body.id;
 }
 
+/**
+ * Operion rejects an academic year whose dates overlap another one in the same organisation (ACA-02), so a
+ * caller that does not care about the dates gets the 2026 default when it is free and otherwise a one-year
+ * window in a random far-future year. Callers that pass startDate/endDate get exactly those dates.
+ */
 export async function createYear(client: ApiClient, overrides: Record<string, unknown> = {}): Promise<{ id: number; name: string }> {
-	const created = await client.post("/api/v1/academic-years", { body: { name: `Year ${uniqueSuffix()}`, startDate: "2026-04-01", endDate: "2027-03-31", ...overrides } });
-	created.expectStatus([200, 201]);
-	return created.body;
+	const explicit = "startDate" in overrides || "endDate" in overrides;
+	let startDate = "2026-04-01";
+	let endDate = "2027-03-31";
+	for (let attempt = 0; ; attempt++) {
+		const created = await client.post("/api/v1/academic-years", { body: { name: `Year ${uniqueSuffix()}`, startDate, endDate, ...overrides } });
+		if (created.status === 409 && !explicit && attempt < 30) {
+			const year = 2100 + Math.floor(Math.random() * 6900);
+			startDate = `${year}-04-01`;
+			endDate = `${year + 1}-03-31`;
+			continue;
+		}
+		created.expectStatus([200, 201]);
+		return created.body;
+	}
 }
 
-/** Year (current unless markCurrent is false), grade, class with two sections, two subjects on the class, and two teachers assigned to the first section. */
-export async function buildAcademicBase(client: ApiClient, options: { assignTeachers?: boolean; markCurrent?: boolean } = {}): Promise<AcademicBase> {
+/** An open year whose dates include today, reusing one the organisation already has (years may not overlap). For
+ * screens that always work on today's date, such as quick attendance marking. */
+export async function yearCoveringToday(client: ApiClient): Promise<{ id: number; name: string }> {
+	const today = new Date().toISOString().slice(0, 10);
+	const years = (await client.get("/api/v1/academic-years")).expectStatus(200).body as { id: number; name: string; startDate: string; endDate: string; status: string }[];
+	const open = years.find((y) => y.status !== "CLOSED" && y.startDate <= today && today <= y.endDate);
+	if (open) return open;
+	const shift = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+	return createYear(client, { startDate: shift(-180), endDate: shift(180) });
+}
+
+/** Year (current unless markCurrent is false; covering today when coverToday is set), grade, class with two sections, two subjects on the class, and two teachers assigned to the first section. */
+export async function buildAcademicBase(client: ApiClient, options: { assignTeachers?: boolean; markCurrent?: boolean; coverToday?: boolean } = {}): Promise<AcademicBase> {
 	const campuses = await client.get("/api/v1/campuses");
 	campuses.expectStatus(200);
 	const campusId: number = campuses.body[0].id;
-	const year = await createYear(client, options.markCurrent === false ? { startDate: `${2100 + Math.floor(Math.random() * 800)}-04-01`, endDate: `${3000 + Math.floor(Math.random() * 900)}-03-31` } : {});
+	const year = options.coverToday ? await yearCoveringToday(client) : await createYear(client);
 	if (options.markCurrent ?? true) (await client.post("/api/v1/academic-years/{id}/mark-current", { params: { id: year.id } })).expectStatus(200);
 
 	const grade = await client.post("/api/v1/grade-levels", { body: { name: `Grade ${uniqueSuffix()}`, sequenceOrder: Math.floor(Math.random() * 2000000000) + 1, stage: "PRIMARY" } });

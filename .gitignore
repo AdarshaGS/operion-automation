@@ -6,3 +6,4 @@ reports/
 .env
 .stack/
 data/
+.auth-perf/

@@ -4,11 +4,19 @@
 //
 // Needs the log of the backend under test: scripts/stack-up.sh writes .stack/backend.log, or
 // point OPERION_BACKEND_LOG at another file. When it is absent the callers skip, not fail.
+// .stack/backend.log belongs to the default stack (:8091) only: when OPERION_API_URL points at any other
+// backend, a stale file left by an earlier default-stack run must not be mistaken for that backend's log, so
+// the log counts as absent until OPERION_BACKEND_LOG names the right one.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { API_BASE_URL } from "../config/env";
 
-export const BACKEND_LOG = process.env.OPERION_BACKEND_LOG ?? join(process.cwd(), ".stack", "backend.log");
+const DEFAULT_STACK_LOG = join(process.cwd(), ".stack", "backend.log");
+const DEFAULT_STACK_URL = "http://localhost:8091";
+
+export const BACKEND_LOG = process.env.OPERION_BACKEND_LOG
+	?? (API_BASE_URL === DEFAULT_STACK_URL ? DEFAULT_STACK_LOG : join(process.cwd(), ".stack", "no-log-for-this-backend"));
 
 export type LoggedLinkKind = "reset-password" | "verify-email";
 

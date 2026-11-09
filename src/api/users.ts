@@ -24,7 +24,7 @@ export interface DisposableUser {
 /** Owner invites a user, who claims the invite - the same path a real staff member takes - and
  * is then granted a no-permission membership. Without a membership the claimed user cannot log
  * in again with their password, which the password/refresh specs need to do. */
-export async function createDisposableUser(owner: ApiClient, anon: ApiClient, seed: OrgContext, permissionCodes: string[] = []): Promise<DisposableUser> {
+export async function createDisposableUser(owner: ApiClient, anon: ApiClient, seed: OrgContext, permissionCodes: string[] = [], options: { portal?: boolean } = {}): Promise<DisposableUser> {
 	const email = `tmp-${uniqueSuffix().toLowerCase()}@${seed.organisationSlug}.test`;
 	const invite = await owner.post("/api/v1/users/invite", { body: { email, phone: null } });
 	invite.expectStatus(200);
@@ -35,9 +35,9 @@ export async function createDisposableUser(owner: ApiClient, anon: ApiClient, se
 	claim.expectStatus(200);
 
 	const suffix = uniqueSuffix();
-	const role = await owner.post("/api/v1/roles", { body: { name: `Disposable ${suffix}`, description: "Created by automation", permissionCodes, portal: false } });
+	const role = await owner.post("/api/v1/roles", { body: { name: `Disposable ${suffix}`, description: "Created by automation", permissionCodes, portal: options.portal ?? false } });
 	role.expectStatus([200, 201]);
-	const person = await owner.post("/api/v1/persons", { body: { firstName: "Disposable", lastName: suffix } });
+	const person = await owner.post("/api/v1/persons", { body: { firstName: "Disposable", lastName: suffix, gender: "MALE" } });
 	person.expectStatus([200, 201]);
 	const membership = await owner.post("/api/v1/memberships", {
 		body: {
@@ -80,7 +80,7 @@ export async function inviteStaffMember(owner: ApiClient, seed: OrgContext, perm
 	invite.expectStatus(200);
 	const role = await owner.post("/api/v1/roles", { body: { name: `Invitee ${suffix}`, description: "Created by automation", permissionCodes, portal: false } });
 	role.expectStatus([200, 201]);
-	const person = await owner.post("/api/v1/persons", { body: { firstName: "Invitee", lastName: suffix } });
+	const person = await owner.post("/api/v1/persons", { body: { firstName: "Invitee", lastName: suffix, gender: "MALE" } });
 	person.expectStatus([200, 201]);
 	(
 		await owner.post("/api/v1/memberships", {

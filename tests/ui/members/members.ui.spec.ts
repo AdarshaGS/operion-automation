@@ -126,10 +126,13 @@ test.describe("roles", () => {
 	test("MEM-U02 the roles table lists system and custom roles and protects the Owner role", async ({ page, roles }) => {
 		await roles.open();
 		await expect(roles.row("Owner")).toContainText("system");
-		await roles.openRowMenu("Owner");
+		// The signed-in user holds the Owner role, so it is shown as theirs and offers no actions at all - nobody can
+		// lock themselves out by editing or deactivating the role that gives them access.
+		await expect(roles.row("Owner")).toContainText("your role");
+		await expect(roles.row("Owner").getByRole("button", { name: "Role actions" })).toHaveCount(0);
+		// Another role is still managed through its row menu.
+		await roles.openRowMenu("Auto No Permissions");
 		await expect(roles.menuItem("Edit permissions")).toBeVisible();
-		await expect(roles.menuItem("Deactivate")).toHaveCount(0);
-		await expect(roles.menuItem("Mark as portal role")).toHaveCount(0);
 		await page.keyboard.press("Escape");
 	});
 
@@ -199,8 +202,9 @@ test.describe("roles", () => {
 		try {
 			await page.goto("/students");
 			await expect(page.getByRole("button", { name: "Students", exact: true })).toBeEnabled();
-			await expect(page.getByRole("button", { name: "Fees", exact: true })).toBeDisabled();
-			await expect(page.getByRole("button", { name: "Members", exact: true })).toBeDisabled();
+			// Items the role has no permission for are left out of the menu rather than greyed out.
+			await expect(page.getByRole("button", { name: "Fees", exact: true })).toHaveCount(0);
+			await expect(page.getByRole("button", { name: "Members", exact: true })).toHaveCount(0);
 		} finally {
 			await context.close();
 		}

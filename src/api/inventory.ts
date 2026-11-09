@@ -48,3 +48,9 @@ export async function createSupplier(api: ApiClient, overrides: Record<string, u
 	res.expectStatus(200);
 	return res.body as { id: number; name: string; status: string };
 }
+
+export async function createCustomerRecord(api: ApiClient, overrides: Record<string, unknown> = {}) {
+	const res = await api.post(`${INV}/customers`, { body: { name: `Customer ${uniqueSuffix()}`, phone: "9222222222", ...overrides } });
+	res.expectStatus(200);
+	return res.body as { id: number; name: string; status: string };
+}

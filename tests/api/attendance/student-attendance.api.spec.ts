@@ -363,7 +363,7 @@ test.describe("permissions", () => {
 
 	test("ATT-16 marking permission allows mark and submit but not lock or correct", async ({ api, anon, seed }) => {
 		const s = await attendanceSetup(api, 1);
-		const marker = await userWith(api, anon, seed, ["ATTENDANCE_VIEW", "ATTENDANCE_MARK"]);
+		const marker = await userWith(api, anon, seed, ["ATTENDANCE_VIEW", "ATTENDANCE_MARK_ANY_SECTION"]);
 		const reg = (await marker.post(REGISTER, { params: { sectionId: s.sectionId }, body: { attendanceDate: s.day(10), marks: marks(s, ["PRESENT"]) } })).expectStatus(200).body;
 		(await marker.post(`${ACTION}/submit`, { params: { registerId: reg.register.id } })).expectStatus(200);
 		(await marker.post(`${ACTION}/lock`, { params: { registerId: reg.register.id } })).expectStatus(403);

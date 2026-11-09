@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { classOption } from "./AttendancePage";
 
 /** /attendance/mark: the focused "mark today" screen. Always today's date, so it works only on a section of the current year. */
 export class MarkAttendanceQuickPage {
@@ -11,7 +12,7 @@ export class MarkAttendanceQuickPage {
 
 	async choose(className: string, sectionName: string) {
 		await this.page.getByRole("combobox", { name: "Class" }).click();
-		await this.page.getByRole("option", { name: className, exact: true }).click();
+		await this.page.getByRole("option", { name: classOption(className) }).click();
 		await this.page.getByRole("combobox", { name: "Section" }).click();
 		await this.page.getByRole("option", { name: sectionName, exact: true }).click();
 	}

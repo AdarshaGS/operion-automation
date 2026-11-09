@@ -319,9 +319,9 @@ test.describe("another organisation", () => {
 
 	test("RPT-01 STD-12 seeding the standard reports in one organisation adds nothing to another", async ({ request, calls }) => {
 		const [a, b] = [await createOtherOrganisation(request, calls), await createOtherOrganisation(request, calls)];
-		(await a.client.post(`${REPORTS}/seed-standard`)).expectStatus(200).expectJson((l) => expect(l).toHaveLength(4));
+		(await a.client.post(`${REPORTS}/seed-standard`)).expectStatus(200).expectJson((l) => expect(l).toHaveLength(10));
 		(await b.client.get(REPORTS)).expectStatus(200).expectJson((l) => expect(l).toEqual([]));
-		(await b.client.post(`${REPORTS}/seed-standard`)).expectStatus(200).expectJson((l) => expect(l).toHaveLength(4));
+		(await b.client.post(`${REPORTS}/seed-standard`)).expectStatus(200).expectJson((l) => expect(l).toHaveLength(10));
 		const aIds = (await a.client.get(REPORTS)).body.map((r: { id: number }) => r.id);
 		const bIds = (await b.client.get(REPORTS)).body.map((r: { id: number }) => r.id);
 		expect(aIds.filter((id: number) => bIds.includes(id))).toEqual([]);

@@ -20,6 +20,7 @@ export class PlatformLoginPage {
 	}
 
 	async signOut() {
-		await this.page.getByRole("button", { name: "Sign out" }).click();
+		await this.page.getByRole("button", { name: "Account menu" }).click();
+		await this.page.getByRole("menuitem", { name: "Sign out" }).click();
 	}
 }

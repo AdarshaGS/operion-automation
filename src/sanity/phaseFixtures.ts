@@ -15,7 +15,12 @@ export const test = uiTest.extend<object, { sanityContext: BrowserContext }>({
 		async ({ browser }, use) => {
 			const context = await browser.newContext({ ...devices["Desktop Chrome"], baseURL: UI_BASE_URL, storageState: EMPTY_STORAGE });
 			await use(context);
-			await context.close();
+			// The context outlives every phase, so it is closed only when the worker shuts down - by then Playwright
+			// has already removed the worker's .playwright-artifacts-N folder and the final trace flush fails with
+			// ENOENT. Every test has finished at that point, so only that error is dropped.
+			await context.close().catch((error: Error) => {
+				if (!/ENOENT.*\.playwright-artifacts-/.test(error.message)) throw error;
+			});
 		},
 		{ scope: "worker" },
 	],

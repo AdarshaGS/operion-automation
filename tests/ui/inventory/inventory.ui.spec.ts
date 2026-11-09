@@ -82,10 +82,14 @@ test.describe("INV-U01 items and stock", () => {
 		const item = await createItem(api);
 		await inventory.openItem(item.id);
 		await expect(page.getByRole("heading", { name: item.name })).toBeVisible();
-		await page.getByLabel("Reorder level (optional)").fill("9");
-		await page.getByRole("button", { name: "Update" }).first().click();
-		await page.getByLabel("Storage location (optional)").fill("Basement");
-		await page.getByRole("button", { name: "Update" }).nth(1).click();
+		const reorder = page.getByLabel("Reorder level (optional)");
+		await reorder.fill("9");
+		await expect(reorder, "the typed reorder level should stay in the field").toHaveValue("9", { timeout: 5_000 });
+		await page.getByRole("button", { name: "Update" }).first().click({ timeout: 5_000 });
+		const location = page.getByLabel("Storage location (optional)");
+		await location.fill("Basement");
+		await expect(location).toHaveValue("Basement", { timeout: 5_000 });
+		await page.getByRole("button", { name: "Update" }).nth(1).click({ timeout: 5_000 });
 		await expect.poll(async () => (await api.get(`${INV}/items`)).body.find((i: { id: number }) => i.id === item.id)).toMatchObject({ reorderLevel: 9, storageLocation: "Basement" });
 	});
 });

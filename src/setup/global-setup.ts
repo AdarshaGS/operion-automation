@@ -44,7 +44,7 @@ export default async function globalSetup(): Promise<void> {
 	const slug = `auto-${runId}`;
 	const ownerEmail = `owner@${slug}.test`;
 
-	await p.provisionOrganisation({
+	const organisation = await p.provisionOrganisation({
 		name: `Automation Org ${runId}`,
 		legalName: `Automation Org ${runId} Pvt Ltd`,
 		slug,
@@ -54,6 +54,7 @@ export default async function globalSetup(): Promise<void> {
 		adminLastName: "Automation",
 	});
 
+	await p.enableSuiteModules(organisation.id);
 	const owner = await p.login(slug, ownerEmail, FIXED_PASSWORD);
 	// Session files are written only once seeding has succeeded: a run that fails part-way (for example on
 	// Operion #354 against a used database) must not leave tokens for a half-built organisation next to
@@ -72,7 +73,7 @@ export default async function globalSetup(): Promise<void> {
 	for (const fixture of ROLE_FIXTURES) {
 		if (fixture.name === "owner") continue;
 		const role = await p.createRole(owner.token, fixture.roleName!, `Seeded for ${fixture.name}`, fixture.permissionCodes!);
-		const person = await p.createPerson(owner.token, { firstName: "Auto", lastName: fixture.name });
+		const person = await p.createPerson(owner.token, { firstName: "Auto", lastName: fixture.name, gender: "MALE" });
 		const invite = await p.inviteUser(owner.token, `${fixture.name}@${slug}.test`);
 		const claimed = await p.claimStaffInvite(slug, invite.claimToken, FIXED_PASSWORD);
 		await p.grantMembership(owner.token, { userId: invite.userId, personId: person.id, roleId: role.id, campusId });

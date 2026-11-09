@@ -17,6 +17,9 @@ import { SubjectsPanel } from "../pages/academics/SubjectsPanel";
 import { SectionTeachersPanel } from "../pages/academics/SectionTeachersPanel";
 import { StaffCreatePage } from "../pages/hr/StaffCreatePage";
 import { StaffDetailPage } from "../pages/hr/StaffDetailPage";
+import { HrPage } from "../pages/hr/HrPage";
+import { AnnouncementsPage } from "../pages/communication/AnnouncementsPage";
+import { PayrollPage } from "../pages/payroll/PayrollPage";
 import { FeeSetupPage } from "../pages/fees/FeeSetupPage";
 import { ClassOfferingsPanel } from "../pages/academics/ClassOfferingsPanel";
 import { EventCalendarPanel } from "../pages/academics/EventCalendarPanel";
@@ -50,7 +53,14 @@ import { FeeCollectionPage } from "../pages/fees/FeeCollectionPage";
 import { FeeDemandPage } from "../pages/fees/FeeDemandPage";
 import { LearningPage } from "../pages/learning/LearningPage";
 import { LibraryPage } from "../pages/library/LibraryPage";
+import { PerformancePage } from "../pages/performance/PerformancePage";
 import { InventoryPage } from "../pages/inventory/InventoryPage";
+import { DashboardPage } from "../pages/dashboard/DashboardPage";
+import { BrandingPanel, CustomFieldsPanel, IdCardStudioPanel, IntegrationsPanel, LetterFormatsPanel } from "../pages/settings/ConfigurationPanels";
+import { PurchasePage } from "../pages/purchase/PurchasePage";
+import { PurchaseOrderPage } from "../pages/purchase/PurchaseOrderPage";
+import { SalesPage } from "../pages/sales/SalesPage";
+import { SaleDetailPage } from "../pages/sales/SaleDetailPage";
 import { AttendancePage } from "../pages/attendance/AttendancePage";
 import { MarkAttendanceQuickPage } from "../pages/attendance/MarkAttendanceQuickPage";
 import { StudentAttendanceSummary } from "../pages/attendance/StudentAttendanceSummary";
@@ -89,8 +99,19 @@ interface UiFixtures {
 	feeCollection: FeeCollectionPage;
 	feeDemand: FeeDemandPage;
 	learning: LearningPage;
+	performance: PerformancePage;
 	library: LibraryPage;
 	inventory: InventoryPage;
+	dashboard: DashboardPage;
+	customFields: CustomFieldsPanel;
+	branding: BrandingPanel;
+	letterFormats: LetterFormatsPanel;
+	idCardStudio: IdCardStudioPanel;
+	integrations: IntegrationsPanel;
+	purchase: PurchasePage;
+	purchaseOrder: PurchaseOrderPage;
+	sales: SalesPage;
+	saleDetail: SaleDetailPage;
 	attendance: AttendancePage;
 	quickAttendance: MarkAttendanceQuickPage;
 	attendanceSummary: StudentAttendanceSummary;
@@ -122,6 +143,9 @@ interface UiFixtures {
 	sectionTeachers: SectionTeachersPanel;
 	staffCreate: StaffCreatePage;
 	staffDetail: StaffDetailPage;
+	hr: HrPage;
+	announcements: AnnouncementsPage;
+	payroll: PayrollPage;
 	feeSetup: FeeSetupPage;
 	classOfferings: ClassOfferingsPanel;
 	sections: SectionsPanel;
@@ -150,8 +174,19 @@ export const test = base.extend<UiFixtures>({
 	feeCollection: async ({ page }, use) => use(instrument(new FeeCollectionPage(page))),
 	feeDemand: async ({ page }, use) => use(instrument(new FeeDemandPage(page))),
 	learning: async ({ page }, use) => use(instrument(new LearningPage(page))),
+	performance: async ({ page }, use) => use(instrument(new PerformancePage(page))),
 	library: async ({ page }, use) => use(instrument(new LibraryPage(page))),
 	inventory: async ({ page }, use) => use(instrument(new InventoryPage(page))),
+	dashboard: async ({ page }, use) => use(instrument(new DashboardPage(page))),
+	customFields: async ({ page }, use) => use(instrument(new CustomFieldsPanel(page))),
+	branding: async ({ page }, use) => use(instrument(new BrandingPanel(page))),
+	letterFormats: async ({ page }, use) => use(instrument(new LetterFormatsPanel(page))),
+	idCardStudio: async ({ page }, use) => use(instrument(new IdCardStudioPanel(page))),
+	integrations: async ({ page }, use) => use(instrument(new IntegrationsPanel(page))),
+	purchase: async ({ page }, use) => use(instrument(new PurchasePage(page))),
+	purchaseOrder: async ({ page }, use) => use(instrument(new PurchaseOrderPage(page))),
+	sales: async ({ page }, use) => use(instrument(new SalesPage(page))),
+	saleDetail: async ({ page }, use) => use(instrument(new SaleDetailPage(page))),
 	attendance: async ({ page }, use) => use(instrument(new AttendancePage(page))),
 	quickAttendance: async ({ page }, use) => use(instrument(new MarkAttendanceQuickPage(page))),
 	attendanceSummary: async ({ page }, use) => use(instrument(new StudentAttendanceSummary(page))),
@@ -183,6 +218,9 @@ export const test = base.extend<UiFixtures>({
 	sectionTeachers: async ({ page }, use) => use(instrument(new SectionTeachersPanel(page))),
 	staffCreate: async ({ page }, use) => use(instrument(new StaffCreatePage(page))),
 	staffDetail: async ({ page }, use) => use(instrument(new StaffDetailPage(page))),
+	hr: async ({ page }, use) => use(instrument(new HrPage(page))),
+	announcements: async ({ page }, use) => use(instrument(new AnnouncementsPage(page))),
+	payroll: async ({ page }, use) => use(instrument(new PayrollPage(page))),
 	feeSetup: async ({ page }, use) => use(instrument(new FeeSetupPage(page))),
 	classOfferings: async ({ page }, use) => use(instrument(new ClassOfferingsPanel(page))),
 	sections: async ({ page }, use) => use(instrument(new SectionsPanel(page))),

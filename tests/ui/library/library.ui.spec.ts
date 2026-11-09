@@ -174,18 +174,21 @@ test.describe("LIB-U03 overdue and fines", () => {
 	});
 
 	test("LIB-U03 the Overdue tab shows the fine due on a late book", async ({ api, seed, library }) => {
+		const rules = (await api.get("/api/v1/library/settings")).expectStatus(200).body;
+		(await api.put("/api/v1/library/settings", { body: { ...rules, fineRatePerDay: 2 } })).expectStatus(200);
 		const { copies } = await bookWithCopies(api, seed.campusId, 1);
 		const reader = await borrower(api);
 		await issue(api, copies[0].id, reader.id, { borrowedDate: daysAgo(30), dueDate: daysAgo(20) });
 		await library.open();
 		await library.tab("Overdue");
-		// The Fine due column is the sixth cell; "—" means no fine, which is what Operion shows (no fine rate exists).
+		// The Fine due column is the sixth cell; "—" means no fine is due.
 		await expect(library.row(reader.name).getByRole("cell").nth(5), "a book 20 days late shows no fine due").not.toHaveText("—");
 	});
 
 	test("LIB-U03 a pending fine can be waived from the record panel", async ({ api, seed, library }) => {
 		const { copies } = await bookWithCopies(api, seed.campusId, 1);
-		await issue(api, copies[0].id, (await borrower(api)).id, { borrowedDate: daysAgo(12), dueDate: daysAgo(5) });
+		// Not yet due, so returning it raises no automatic fine and the one raised below is the only row.
+		await issue(api, copies[0].id, (await borrower(api)).id, { borrowedDate: daysAgo(12), dueDate: daysAgo(-5) });
 		await library.open();
 		await library.tab("Borrow / return");
 		await library.returnBook(copies[0].accessionNumber);
@@ -233,12 +236,13 @@ test.describe("LIB-U settings and access", () => {
 		}
 	});
 
-	test("LIB-U01 a member without library access has the Library menu item disabled", async ({ api, anon, seed, browser }) => {
+	test("LIB-U01 a member without library access does not see the Library menu item", async ({ api, anon, seed, browser }) => {
 		const { page, context } = await signedInAs(api, anon, seed, browser, []);
 		try {
 			const layout = new AppLayoutPage(page);
 			await layout.open();
-			expect(await layout.isNavItemEnabled("Library")).toBe(false);
+			// Items a member has no permission for are left out of the menu rather than greyed out.
+			await expect(layout.navItem("Library")).toHaveCount(0);
 		} finally {
 			await context.close();
 		}

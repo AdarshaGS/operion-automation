@@ -130,7 +130,7 @@ test.describe("staff and guardian invites", () => {
 
 	test("AUTH-21 a guardian portal invite is claimed once and yields portal access", async ({ api, anon, seed }) => {
 		const suffix = uniqueSuffix();
-		const person = await api.post("/api/v1/persons", { body: { firstName: "Guardian", lastName: suffix, email: `guardian-${suffix.toLowerCase()}@${seed.organisationSlug}.test` } });
+		const person = await api.post("/api/v1/persons", { body: { firstName: "Guardian", lastName: suffix, gender: "FEMALE", email: `guardian-${suffix.toLowerCase()}@${seed.organisationSlug}.test` } });
 		person.expectStatus([200, 201]);
 		const guardian = await api.post("/api/v1/guardians", { body: { personId: person.body.id } });
 		guardian.expectStatus([200, 201]);

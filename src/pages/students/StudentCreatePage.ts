@@ -19,7 +19,7 @@ export interface NewStudentInput {
 	emergencyContactName?: string;
 	emergencyContactPhone?: string;
 	/** The form's inline "Primary guardian" section (optional on the page). */
-	guardian?: { firstName: string; lastName: string; phone?: string; relationship?: string };
+	guardian?: { firstName: string; lastName: string; phone?: string; relationship?: string; gender?: string };
 }
 
 export class StudentCreatePage {
@@ -31,11 +31,9 @@ export class StudentCreatePage {
 		await this.page.getByLabel(/^First name/).fill(input.firstName);
 		await this.page.getByLabel(/^Last name/).fill(input.lastName);
 		if (input.dateOfBirth) await this.page.getByLabel("Date of birth").fill(input.dateOfBirth);
-		// Gender is a dropdown (Male / Female / Other), not free text.
-		if (input.gender) {
-			await this.page.getByRole("combobox", { name: /^Gender/ }).click();
-			await this.page.getByRole("option", { name: input.gender, exact: true }).click();
-		}
+		// Gender is a required dropdown (Male / Female / Other), not free text.
+		await this.page.getByRole("combobox", { name: /^Gender/ }).click();
+		await this.page.getByRole("option", { name: input.gender ?? "Other", exact: true }).click();
 		await this.page.getByLabel("Admission number").fill(input.admissionNumber);
 		await this.page.getByLabel("Admission date").fill(input.admissionDate);
 		if (input.previousSchool) await this.page.getByLabel("Previous school").fill(input.previousSchool);
@@ -65,6 +63,9 @@ export class StudentCreatePage {
 		if (guardian) {
 			await this.page.getByLabel("Guardian first name").fill(guardian.firstName);
 			await this.page.getByLabel("Guardian last name").fill(guardian.lastName);
+			// Guardian gender is required as soon as a guardian name is typed.
+			await this.page.getByRole("combobox", { name: /^Guardian gender/ }).click();
+			await this.page.getByRole("option", { name: guardian.gender ?? "Other", exact: true }).click();
 			if (guardian.phone) await this.page.getByLabel("Guardian mobile").fill(guardian.phone);
 			if (guardian.relationship) {
 				await this.page.getByRole("combobox", { name: "Relationship" }).click();

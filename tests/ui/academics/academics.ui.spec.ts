@@ -17,6 +17,12 @@ async function campusName(api: ApiClient, campusId: number): Promise<string> {
 	return campuses.body.find((c: { id: number }) => c.id === campusId).name;
 }
 
+function randomSlot(): { startTime: string; endTime: string } {
+	const start = Math.floor(Math.random() * 140) * 10;
+	const at = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+	return { startTime: at(start), endTime: at(start + 10) };
+}
+
 /** A draft-year academic structure with a uniquely named period and its names, ready for timetable work. */
 async function timetableFixture(api: ApiClient) {
 	const base = await buildAcademicBase(api, { markCurrent: false });
@@ -26,7 +32,12 @@ async function timetableFixture(api: ApiClient) {
 	const subjectName = (id: number): string => subjects.body.find((s: { id: number }) => s.id === id).name;
 	const label = `UIP${uniqueSuffix().slice(-6)}`;
 	const ordinal = 1000 + Math.floor(Math.random() * 100000);
-	const period = await api.post("/api/v1/timetable/periods", { body: { ordinal, label, startTime: "21:00", endTime: "21:30", breakSlot: false } });
+	// Periods may not overlap, and other specs run in parallel in the same organisation: take a random
+	// 10-minute slot and try another when it is already taken.
+	let period = await api.post("/api/v1/timetable/periods", { body: { ordinal, label, ...randomSlot(), breakSlot: false } });
+	for (let attempt = 0; attempt < 30 && period.status === 409; attempt++) {
+		period = await api.post("/api/v1/timetable/periods", { body: { ordinal, label, ...randomSlot(), breakSlot: false } });
+	}
 	period.expectStatus([200, 201]);
 	const cleanup = async () => {
 		for (const sectionId of [base.sectionId, base.secondSectionId]) {
@@ -238,6 +249,12 @@ test.describe("school day periods", () => {
 });
 
 test.describe("events calendar", () => {
+	// Communication is off by default for a new organisation (Operion ModuleAccessService), and the calendar page lives in it.
+	test.beforeEach(async ({ api }) => {
+		const { enableModule } = await import("../../../src/setup/provisioning");
+		await enableModule((await api.get("/api/v1/auth/me")).expectStatus(200).body.organisationId, "COMMUNICATION");
+	});
+
 	function dayInCurrentMonth(day: number): string {
 		const now = new Date();
 		return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;

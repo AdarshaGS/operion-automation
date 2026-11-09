@@ -1,7 +1,7 @@
 // Plain-fetch helpers used only by global-setup to build the run's fixture organisation.
 // Specs never import this: they exercise the product through api/ (recorded) or pages/ (UI).
 
-import { API_BASE_URL } from "../config/env";
+import { API_BASE_URL, PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_PASSWORD } from "../config/env";
 
 export class SetupError extends Error {
 	constructor(readonly status: number, message: string) {
@@ -39,6 +39,38 @@ export const provisionOrganisation = (input: {
 
 export const login = (organisationSlug: string, email: string, password: string) =>
 	post<Session>("/api/v1/auth/login", { organisationSlug, email, password });
+
+/** Switches a module on or off for an organisation through the platform console API. Transport is off by default
+ * (Operion ModuleAccessService), so anything exercising vehicles, routes or trips has to enable it first. */
+export async function setModule(organisationId: number, code: string, enabled: boolean): Promise<void> {
+	const platform = await post<{ token: string }>("/api/v1/platform/auth/login", { email: PLATFORM_ADMIN_EMAIL, password: PLATFORM_ADMIN_PASSWORD });
+	await call("PUT", `/api/v1/platform/organisations/${organisationId}/modules/${code}`, { enabled, note: "Set by automation" }, platform.token);
+}
+
+export const enableModule = (organisationId: number, code: string) => setModule(organisationId, code, true);
+
+/**
+ * Optional modules start off for a new organisation (AppModule.defaultEnabled, Operion school/V24), but the
+ * suite covers every one of them, so each organisation the suite creates switches them all on. Specs that
+ * check the "module off" behaviour turn a module off themselves.
+ */
+export const SUITE_MODULES = ["TRANSPORT", "LIBRARY", "LEARNING", "MESSAGING", "INVENTORY", "PURCHASE", "SALES", "REPORTS", "PAYROLL", "COMPLIANCE", "PERFORMANCE"];
+
+export async function enableSuiteModules(organisationId: number) {
+	for (const code of SUITE_MODULES) await enableModule(organisationId, code);
+}
+
+/** Grants or withdraws an organisation's entitlement to an external service (brevo, whatsapp) through the platform console API. */
+export async function setExternalService(organisationId: number, serviceKey: string, enabled: boolean): Promise<void> {
+	const platform = await post<{ token: string }>("/api/v1/platform/auth/login", { email: PLATFORM_ADMIN_EMAIL, password: PLATFORM_ADMIN_PASSWORD });
+	await call("PATCH", `/api/v1/platform/organisations/${organisationId}/external-services/${serviceKey}`, { enabled }, platform.token);
+}
+
+/** The module switches the platform console shows for an organisation, with the history of changes. */
+export async function moduleHistory(organisationId: number): Promise<unknown[]> {
+	const platform = await post<{ token: string }>("/api/v1/platform/auth/login", { email: PLATFORM_ADMIN_EMAIL, password: PLATFORM_ADMIN_PASSWORD });
+	return get<unknown[]>(`/api/v1/platform/organisations/${organisationId}/modules/history`, platform.token);
+}
 
 export const listCampuses = (token: string) => get<{ id: number }[]>("/api/v1/campuses", token);
 

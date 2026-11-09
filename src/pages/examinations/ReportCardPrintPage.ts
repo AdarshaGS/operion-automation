@@ -20,6 +20,10 @@ export class ReportCardPrintPage {
 		return this.page.getByRole("button", { name: "Print" });
 	}
 
+	downloadPdfButton() {
+		return this.page.getByRole("button", { name: "Download PDF" });
+	}
+
 	staleWarning() {
 		return this.page.getByRole("alert").filter({ hasText: /stale/i });
 	}

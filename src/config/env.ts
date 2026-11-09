@@ -12,7 +12,8 @@ if (existsSync(join(ROOT, ".env"))) process.loadEnvFile(join(ROOT, ".env"));
 export const API_BASE_URL = process.env.OPERION_API_URL ?? "http://localhost:8091";
 export const UI_BASE_URL = process.env.OPERION_UI_URL ?? "http://localhost:5184";
 
-export const AUTH_DIR = join(ROOT, ".auth");
+// OPERION_AUTH_DIR lets a second stack keep its own seed and sessions, so two stacks never overwrite each other's .auth files.
+export const AUTH_DIR = process.env.OPERION_AUTH_DIR ? join(ROOT, process.env.OPERION_AUTH_DIR) : join(ROOT, ".auth");
 export const REPORT_DIR = join(ROOT, "reports");
 export const SESSION_STORAGE_KEY = "operion.session";
 

@@ -177,7 +177,8 @@ test.describe("LRN-U04 leaderboards", () => {
 			await learning.tab("Leaderboards");
 			await learning.showBoard(sectionLabel(s), track);
 			if (track === "Rewards") {
-				await expect(page.getByRole("columnheader", { name: header })).toBeVisible();
+				// The "Recent rewards" table below the board has a Points column too once anyone has been rewarded.
+				await expect(page.getByRole("columnheader", { name: header }).first()).toBeVisible();
 				await expect(learning.row(s.studentNames[0])).toContainText("4");
 			} else {
 				await expect(page.getByText(`Nobody in this section has a ${track.toLowerCase()} score yet.`)).toBeVisible();

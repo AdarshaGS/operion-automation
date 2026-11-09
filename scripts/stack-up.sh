@@ -49,7 +49,9 @@ REPORTING_DB_URL="jdbc:mysql://localhost:3306/${DB}?allowPublicKeyRetrieval=true
 REPORTING_DB_USERNAME="${REPORTING_DB_USERNAME:-reporting_ro}" REPORTING_DB_PASSWORD="${REPORTING_DB_PASSWORD:-changeme-reporting-ro}" \
 JWT_SECRET=dev-only-secret-change-me-before-any-real-deployment-32bytes-min \
 PLATFORM_JWT_SECRET=dev-only-platform-secret-change-me-before-any-real-deployment-32b \
+BACKUP_DIR="$STACK_DIR/backups" \
 SPRING_PROFILES_ACTIVE=dev \
+APP_DEV_LOGAUTHTOKENS=true \
   nohup java -jar "$OPERION_JAR" >"$STACK_DIR/backend.log" 2>&1 </dev/null &
 echo $! >"$STACK_DIR/backend.pid"
 

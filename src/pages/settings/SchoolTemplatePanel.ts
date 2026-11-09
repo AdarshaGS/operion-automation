@@ -53,7 +53,7 @@ export class SchoolTemplatePanel {
 			add: async (name: string) => {
 				const accordion = this.page.locator(".MuiAccordion-root").filter({ has: header });
 				await accordion.getByRole("button", { name: "Add", exact: true }).click();
-				const dialog = this.page.getByRole("dialog", { name: /^Add / });
+				const dialog = accordion.getByRole("form", { name: /^Add / }); // inline add form, not a pop-up
 				await dialog.getByLabel(/^Name/).fill(name);
 				await dialog.getByRole("button", { name: "Save" }).click();
 				await dialog.waitFor({ state: "hidden" });

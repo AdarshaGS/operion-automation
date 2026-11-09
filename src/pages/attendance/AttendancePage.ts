@@ -6,12 +6,14 @@ export class AttendancePage {
 
 	async open() {
 		await this.page.goto("/attendance");
-		await this.page.getByRole("combobox", { name: "Class" }).waitFor();
+		// The page lands on the Overview tab (which has its own Class filter); the register is the second tab.
+		await this.page.getByRole("tab", { name: "Class Register" }).click();
+		await this.page.getByRole("button", { name: "Load", exact: true }).waitFor();
 	}
 
 	async choose(className: string, sectionName: string) {
 		await this.page.getByRole("combobox", { name: "Class" }).click();
-		await this.page.getByRole("option", { name: className, exact: true }).click();
+		await this.page.getByRole("option", { name: classOption(className) }).click();
 		await this.page.getByRole("combobox", { name: "Section" }).click();
 		await this.page.getByRole("option", { name: sectionName, exact: true }).click();
 	}
@@ -92,4 +94,10 @@ export class AttendancePage {
 	alert() {
 		return this.page.getByRole("alert");
 	}
+}
+
+/** Class pickers label options "<class> · <campus>"; match the class name with or without that suffix. */
+export function classOption(className: string) {
+	const escaped = className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return new RegExp(`^${escaped}( · .+)?$`);
 }

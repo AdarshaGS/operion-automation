@@ -34,7 +34,7 @@ test("sanity 07: student allocation - class and section confirmed, class fee str
 	const business = loadSanityBusiness(6);
 	const student = business.student!;
 	const classLabel = `${A.enrolment.className} · ${A.enrolment.campus}`;
-	const studentLabel = `${student.name} (${student.admissionNumber})`;
+	const studentLabel = `${student.name} (${student.studentId})`; // how the Collect fee student picker labels him
 
 	await j.step(S.ownerLogin, async () => {
 		await continueAsOwner(page, loginPage, business);

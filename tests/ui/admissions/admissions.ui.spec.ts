@@ -241,6 +241,9 @@ test.describe("record an inquiry on the students page", () => {
 		await dialog.getByLabel(/^First name/).fill("Ila");
 		await dialog.getByLabel(/^Last name/).fill(lastName);
 		await dialog.getByLabel("Date of birth").fill("2018-05-10");
+		// Gender is a required dropdown on the inquiry form (the person record requires it).
+		await dialog.getByRole("combobox", { name: /^Gender/ }).click();
+		await page.getByRole("option", { name: "Male", exact: true }).click();
 		await dialog.getByLabel("Inquiry date").fill("2026-06-01");
 		await dialog.getByLabel("Source").fill("Walk-in");
 		await dialog.getByRole("button", { name: /^(Record|Save|Submit)/ }).last().click();

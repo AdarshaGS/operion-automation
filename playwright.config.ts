@@ -1,6 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 import { API_BASE_URL, UI_BASE_URL } from "./src/config/env";
 import { storageStatePath } from "./src/setup/session";
+import { claimSanityRunLock } from "./src/sanity/runLock";
+
+// Before anything else: Playwright empties test-results/sanity right after loading this file, so a
+// second sanity run must be refused here or it breaks the one already in progress.
+claimSanityRunLock();
 
 // No webServer block: Operion's backend (Java) and frontend are started separately against a
 // throwaway database - see README.md. This suite never starts, stops, or resets them.

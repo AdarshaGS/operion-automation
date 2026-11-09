@@ -54,11 +54,13 @@ export class StudentDetailPage {
 		return this.page.getByRole("dialog");
 	}
 
-	async addGuardian(input: { firstName: string; lastName: string; phone?: string; email?: string; relationship?: string; primary?: boolean; emergencyContact?: boolean; contactPriority?: number }) {
+	async addGuardian(input: { firstName: string; lastName: string; gender?: string; phone?: string; email?: string; relationship?: string; primary?: boolean; emergencyContact?: boolean; contactPriority?: number }) {
 		await this.panel("Guardians").getByRole("button", { name: "Add guardian" }).click();
 		const dialog = this.dialog();
 		await dialog.getByLabel(/^First name/).fill(input.firstName);
 		await dialog.getByLabel(/^Last name/).fill(input.lastName);
+		await dialog.getByRole("combobox", { name: /^Gender/ }).click();
+		await this.page.getByRole("option", { name: input.gender ?? "Other", exact: true }).click();
 		if (input.phone) await dialog.getByLabel("Phone").fill(input.phone);
 		if (input.email) await dialog.getByLabel("Email").fill(input.email);
 		if (input.relationship) {

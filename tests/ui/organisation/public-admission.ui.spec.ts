@@ -8,7 +8,7 @@ import { uniqueSuffix } from "../../../src/api/data";
 test.use({ storageState: EMPTY_STORAGE });
 
 function child() {
-	return { firstName: "Asha", lastName: `Form${uniqueSuffix()}`, dateOfBirth: "2018-05-10", guardianName: "Ravi Parent", guardianPhone: "+919876543210" };
+	return { firstName: "Asha", lastName: `Form${uniqueSuffix()}`, dateOfBirth: "2018-05-10", gender: "Female", guardianName: "Ravi Parent", guardianPhone: "+919876543210" };
 }
 
 test.describe("public admission form", () => {

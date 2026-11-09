@@ -12,10 +12,11 @@ export class LoginPage {
 		await expect(async () => {
 			await this.page.getByLabel("Organisation slug").fill(organisationSlug);
 			await this.page.getByLabel("Email").fill(email);
-			await this.page.getByLabel("Password").fill(password);
+			await this.page.getByLabel(/^Password/).fill(password);
 			await expect(this.page.getByLabel("Organisation slug")).toHaveValue(organisationSlug, { timeout: 1000 });
-			await expect(this.page.getByLabel("Email")).toHaveValue(email, { timeout: 1000 });
-			await expect(this.page.getByLabel("Password")).toHaveValue(password, { timeout: 1000 });
+			// A type="email" input strips surrounding spaces from its own value, so compare the trimmed text.
+			await expect(this.page.getByLabel("Email")).toHaveValue(email.trim(), { timeout: 1000 });
+			await expect(this.page.getByLabel(/^Password/)).toHaveValue(password, { timeout: 1000 });
 		}).toPass({ timeout: 15_000 });
 		await this.page.getByRole("button", { name: "Sign in" }).click();
 	}
@@ -36,11 +37,11 @@ export class LoginPage {
 	async loginWithEnterKey(organisationSlug: string, email: string, password: string) {
 		await this.page.getByLabel("Organisation slug").fill(organisationSlug);
 		await this.page.getByLabel("Email").fill(email);
-		await this.page.getByLabel("Password").fill(password);
-		await this.page.getByLabel("Password").press("Enter");
+		await this.page.getByLabel(/^Password/).fill(password);
+		await this.page.getByLabel(/^Password/).press("Enter");
 	}
 
 	passwordField() {
-		return this.page.getByLabel("Password");
+		return this.page.getByLabel(/^Password/);
 	}
 }

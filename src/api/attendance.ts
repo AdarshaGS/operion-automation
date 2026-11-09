@@ -22,8 +22,10 @@ export interface AttendanceSetup {
 	yearName: string;
 }
 
-export async function attendanceSetup(api: ApiClient, students = 3, enrolledDay = 1): Promise<AttendanceSetup> {
-	const base = await buildAcademicBase(api, { assignTeachers: false, markCurrent: false });
+/** `coverToday` puts the section in a year that includes today, for screens that only mark today; the default is a
+ * year of its own, so registers never collide. */
+export async function attendanceSetup(api: ApiClient, students = 3, enrolledDay = 1, options: { coverToday?: boolean } = {}): Promise<AttendanceSetup> {
+	const base = await buildAcademicBase(api, { assignTeachers: false, markCurrent: false, coverToday: options.coverToday });
 	const years = (await api.get("/api/v1/academic-years")).body;
 	const thisYear = years.find((y: { id: number }) => y.id === base.yearId);
 	const start: string = thisYear.startDate;
@@ -57,4 +59,15 @@ export async function markRegister(api: ApiClient, setup: AttendanceSetup, date:
 	const res = await api.post(REGISTER, { params: { sectionId: setup.sectionId }, body: { attendanceDate: date, marks: marks(setup, statuses) } });
 	res.expectStatus(200);
 	return res;
+}
+
+/** Codes a class teacher's role needs to open the register screens and mark their own section. */
+export const CLASS_TEACHER_CODES = ["ATTENDANCE_VIEW", "ATTENDANCE_MARK", "CLASS_VIEW", "STUDENT_VIEW"];
+
+/** Makes a disposable user the ACTIVE homeroom (class) teacher of the section - the only kind of teacher plain ATTENDANCE_MARK lets mark. */
+export async function makeClassTeacher(api: ApiClient, sectionId: number, personId: number, startDate: string) {
+	(await api.post("/api/v1/sections/{sectionId}/teacher-assignments", {
+		params: { sectionId },
+		body: { subjectId: null, teacherPersonId: personId, assignmentType: "HOMEROOM", startDate },
+	})).expectStatus([200, 201]);
 }
